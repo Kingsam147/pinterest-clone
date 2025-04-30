@@ -983,7 +983,7 @@ async function seedDatabase() {
     // Create users
     const createdUsers = await Promise.all(
       users.map(async (user) => {
-        const hashedPassword = await bcrypt.hash(user.password, 10);
+        // const hashedPassword = await bcrypt.hash(user.password, 10);
         // Analytics fields
         const loginCount = Math.floor(Math.random() * 50) + 1;
         const deviceType = getRandomDeviceType();
@@ -994,7 +994,7 @@ async function seedDatabase() {
         const activityScore = Math.floor(Math.random() * 991) + 10; // 10-1000
         return User.create({
           ...user,
-          password: hashedPassword,
+          password: user.password,
           lastLogin,
           loginCount,
           deviceType,
