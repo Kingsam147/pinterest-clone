@@ -34,14 +34,14 @@ const LoginScreen = () => {
 
         {error && <p style={styles.error}>{error}</p>}
 
-        <div style={styles.testCredentials}>
+        {/* <div style={styles.testCredentials}>
           <p>
             <strong>Test credentials:</strong><br />
             Email: john@example.com<br />
             Password: password123<br />
             <em>Note: Enter the password without any prefix</em>
           </p>
-        </div>
+        </div> */}
 
         <input
           type="email"

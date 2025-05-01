@@ -18,6 +18,7 @@ const getAuthToken = async () => {
 // Helper function to handle API responses
 const handleResponse = async (response) => {
   if (!response.ok) {
+    console.log(response);
     const errorData = await response.json();
     console.error('API Error Response:', {
       status: response.status,

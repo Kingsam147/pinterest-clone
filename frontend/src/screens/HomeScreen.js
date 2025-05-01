@@ -63,7 +63,11 @@ const HomeScreen = () => {
           }}
         />
         <button onClick={() => navigate('/profile')}>Profile</button>
-        <button onClick={() => navigate('/settings')}>Settings</button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <img src='/settings-icon.jpg'/>
+          <button onClick={() => navigate('/settings')}>Settings</button> 
+        </div>
       </div>
 
       <div style={{
@@ -84,7 +88,11 @@ const HomeScreen = () => {
             }}
           >
             <img
-              src={pin.imageUrl}
+              src={pin.imageUrl || '/placeholderImage.png'}
+              onError={(e) => {
+                e.target.onerror = null; // Prevent infinite loop
+                e.target.src = '/placeholderImage.png'; // fallback image
+              }}
               alt={pin.title}
               style={{ width: '100%', height: '200px', objectFit: 'cover' }}
             />

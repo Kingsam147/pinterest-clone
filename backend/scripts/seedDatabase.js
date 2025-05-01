@@ -992,9 +992,10 @@ async function seedDatabase() {
         const lastLogin = getRandomDateWithinDays(30);
         const sessionDuration = Math.floor(Math.random() * 116) + 5; // 5-120 min
         const activityScore = Math.floor(Math.random() * 991) + 10; // 10-1000
+        const hashedPassword = await bcrypt.hash(user.password, 10);
         return User.create({
           ...user,
-          password: user.password,
+          password: hashedPassword,
           lastLogin,
           loginCount,
           deviceType,
