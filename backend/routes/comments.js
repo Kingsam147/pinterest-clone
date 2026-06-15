@@ -4,10 +4,11 @@ const Comment = require('../models/Comment');
 const Pin = require('../models/Pin');
 const authMiddleware = require('../middleware/auth');
 const validate = require('../middleware/validate');
+const { readLimiter, writeLimiter } = require('../middleware/rateLimiter');
 const { createCommentSchema } = require('../schemas/comment.schemas');
 
 // Get all comments for a pin
-router.get('/pin/:pinId', async (req, res) => {
+router.get('/pin/:pinId', readLimiter, async (req, res) => {
   try {
     const comments = await Comment.find({ pin: req.params.pinId })
       .populate('user', 'username avatar')
@@ -20,7 +21,7 @@ router.get('/pin/:pinId', async (req, res) => {
 });
 
 // Add comment to a pin (authenticated)
-router.post('/pin/:pinId', authMiddleware, validate(createCommentSchema), async (req, res) => {
+router.post('/pin/:pinId', writeLimiter, authMiddleware, validate(createCommentSchema), async (req, res) => {
   try {
     const { text } = req.body;
 
@@ -48,7 +49,7 @@ router.post('/pin/:pinId', authMiddleware, validate(createCommentSchema), async 
 });
 
 // Delete comment (authenticated, owner only)
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', writeLimiter, authMiddleware, async (req, res) => {
   try {
     const comment = await Comment.findById(req.params.id);
     if (!comment) {

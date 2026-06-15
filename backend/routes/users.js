@@ -3,9 +3,10 @@ const router = express.Router();
 const User = require('../models/User');
 const Pin = require('../models/Pin');
 const authMiddleware = require('../middleware/auth');
+const { readLimiter, writeLimiter } = require('../middleware/rateLimiter');
 
 // Get user profile by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', readLimiter, async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) {
@@ -19,7 +20,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Get pins created by a user
-router.get('/:id/pins', async (req, res) => {
+router.get('/:id/pins', readLimiter, async (req, res) => {
   try {
     const pins = await Pin.find({ user: req.params.id })
       .populate('user', 'username avatar')
@@ -32,7 +33,7 @@ router.get('/:id/pins', async (req, res) => {
 });
 
 // Follow or unfollow a user (authenticated)
-router.put('/:id/follow', authMiddleware, async (req, res) => {
+router.put('/:id/follow', writeLimiter, authMiddleware, async (req, res) => {
   try {
     if (req.params.id === req.user.userId) {
       return res.status(400).json({ message: 'You cannot follow yourself' });

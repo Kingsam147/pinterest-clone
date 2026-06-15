@@ -3,10 +3,11 @@ const router = express.Router();
 const Pin = require('../models/Pin');
 const authMiddleware = require('../middleware/auth');
 const validate = require('../middleware/validate');
+const { readLimiter, writeLimiter } = require('../middleware/rateLimiter');
 const { createPinSchema, updatePinSchema } = require('../schemas/pin.schemas');
 
 // Search pins — must be defined before /:id to avoid route conflict
-router.get('/search', async (req, res) => {
+router.get('/search', readLimiter, async (req, res) => {
   try {
     const { q } = req.query;
     if (!q) {
@@ -27,7 +28,7 @@ router.get('/search', async (req, res) => {
 });
 
 // Get all pins
-router.get('/', async (req, res) => {
+router.get('/', readLimiter, async (req, res) => {
   try {
     const pins = await Pin.find().populate('user', 'username avatar').sort({ createdAt: -1 });
     res.json(pins);
@@ -38,7 +39,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get pin by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', readLimiter, async (req, res) => {
   try {
     const pin = await Pin.findById(req.params.id).populate('user', 'username avatar');
     if (!pin) {
@@ -52,7 +53,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create pin (authenticated)
-router.post('/', authMiddleware, validate(createPinSchema), async (req, res) => {
+router.post('/', writeLimiter, authMiddleware, validate(createPinSchema), async (req, res) => {
   try {
     const { title, description, imageUrl, category, tags, boardId } = req.body;
     const pin = new Pin({
@@ -74,7 +75,7 @@ router.post('/', authMiddleware, validate(createPinSchema), async (req, res) => 
 });
 
 // Update pin (authenticated, owner only)
-router.put('/:id', authMiddleware, validate(updatePinSchema), async (req, res) => {
+router.put('/:id', writeLimiter, authMiddleware, validate(updatePinSchema), async (req, res) => {
   try {
     const pin = await Pin.findById(req.params.id);
     if (!pin) {
@@ -95,7 +96,7 @@ router.put('/:id', authMiddleware, validate(updatePinSchema), async (req, res) =
 });
 
 // Delete pin (authenticated, owner only)
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', writeLimiter, authMiddleware, async (req, res) => {
   try {
     const pin = await Pin.findById(req.params.id);
     if (!pin) {

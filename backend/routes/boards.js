@@ -3,10 +3,11 @@ const router = express.Router();
 const Board = require('../models/Board');
 const authMiddleware = require('../middleware/auth');
 const validate = require('../middleware/validate');
+const { readLimiter, writeLimiter } = require('../middleware/rateLimiter');
 const { createBoardSchema, updateBoardSchema } = require('../schemas/board.schemas');
 
 // Get all boards for a user
-router.get('/user/:userId', async (req, res) => {
+router.get('/user/:userId', readLimiter, async (req, res) => {
   try {
     const boards = await Board.find({ user: req.params.userId }).sort({ createdAt: -1 });
     res.json(boards);
@@ -17,7 +18,7 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 // Get board by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', readLimiter, async (req, res) => {
   try {
     const board = await Board.findById(req.params.id).populate('pins');
     if (!board) {
@@ -31,7 +32,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create board (authenticated)
-router.post('/', authMiddleware, validate(createBoardSchema), async (req, res) => {
+router.post('/', writeLimiter, authMiddleware, validate(createBoardSchema), async (req, res) => {
   try {
     const { title, description } = req.body;
     const board = new Board({
@@ -48,7 +49,7 @@ router.post('/', authMiddleware, validate(createBoardSchema), async (req, res) =
 });
 
 // Update board (authenticated, owner only)
-router.put('/:id', authMiddleware, validate(updateBoardSchema), async (req, res) => {
+router.put('/:id', writeLimiter, authMiddleware, validate(updateBoardSchema), async (req, res) => {
   try {
     const board = await Board.findById(req.params.id);
     if (!board) {
@@ -69,7 +70,7 @@ router.put('/:id', authMiddleware, validate(updateBoardSchema), async (req, res)
 });
 
 // Delete board (authenticated, owner only)
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', writeLimiter, authMiddleware, async (req, res) => {
   try {
     const board = await Board.findById(req.params.id);
     if (!board) {
@@ -87,7 +88,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
 // Add pin to board (authenticated)
-router.post('/:id/pins', authMiddleware, async (req, res) => {
+router.post('/:id/pins', writeLimiter, authMiddleware, async (req, res) => {
   try {
     const { pinId } = req.body;
     const board = await Board.findById(req.params.id);
@@ -106,7 +107,7 @@ router.post('/:id/pins', authMiddleware, async (req, res) => {
 });
 
 // Remove pin from board (authenticated)
-router.delete('/:id/pins/:pinId', authMiddleware, async (req, res) => {
+router.delete('/:id/pins/:pinId', writeLimiter, authMiddleware, async (req, res) => {
   try {
     const board = await Board.findById(req.params.id);
     if (!board) {

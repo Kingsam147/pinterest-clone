@@ -5,10 +5,11 @@ const User = require('../models/User');
 const config = require('../config');
 const authMiddleware = require('../middleware/auth');
 const validate = require('../middleware/validate');
+const { authLimiter, readLimiter } = require('../middleware/rateLimiter');
 const { registerSchema, loginSchema } = require('../schemas/auth.schemas');
 
 // Register
-router.post('/register', validate(registerSchema), async (req, res) => {
+router.post('/register', authLimiter, validate(registerSchema), async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
@@ -33,7 +34,7 @@ router.post('/register', validate(registerSchema), async (req, res) => {
 });
 
 // Login
-router.post('/login', validate(loginSchema), async (req, res) => {
+router.post('/login', authLimiter, validate(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -60,7 +61,7 @@ router.post('/login', validate(loginSchema), async (req, res) => {
 });
 
 // Get current authenticated user
-router.get('/me', authMiddleware, async (req, res) => {
+router.get('/me', readLimiter, authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('-password');
     if (!user) {
