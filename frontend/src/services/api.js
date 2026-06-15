@@ -207,3 +207,16 @@ export const usersAPI = {
     return handleResponse(response);
   },
 };
+
+export const uploadAPI = {
+  uploadImage: async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const response = await fetch(`${API_URL}/upload`, {
+      method: 'POST',
+      headers: { 'x-auth-token': getToken() || '' },
+      body: formData,
+    });
+    return handleResponse(response);
+  },
+};
