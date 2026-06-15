@@ -11,6 +11,7 @@ const pinsRoutes = require('./routes/pins');
 const boardsRoutes = require('./routes/boards');
 const commentsRoutes = require('./routes/comments');
 const usersRoutes = require('./routes/users');
+const uploadRoutes = require('./routes/upload');
 
 const app = express();
 
@@ -27,13 +28,18 @@ app.use('/api/pins', pinsRoutes);
 app.use('/api/boards', boardsRoutes);
 app.use('/api/comments', commentsRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/upload', uploadRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
-const PORT = config.PORT;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (!process.env.VERCEL) {
+  const PORT = config.PORT;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
