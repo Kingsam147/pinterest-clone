@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authAPI } from '../services/api';
 
 const RegisterScreen = () => {
   const [formData, setFormData] = useState({
@@ -15,34 +16,23 @@ const RegisterScreen = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
-      setLoading(false);
       return;
     }
 
+    setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-        }),
+      const data = await authAPI.register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
-      }
-
-      localStorage.setItem('token', data.token); // Use localStorage instead of AsyncStorage on web
+      localStorage.setItem('token', data.token);
       navigate('/home');
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -132,6 +122,7 @@ const styles = {
     borderRadius: 8,
     border: '1px solid #ccc',
     fontSize: 16,
+    boxSizing: 'border-box',
   },
   button: {
     width: '100%',

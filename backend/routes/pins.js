@@ -1,11 +1,36 @@
 const express = require('express');
 const router = express.Router();
 const Pin = require('../models/Pin');
+const authMiddleware = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const { readLimiter, writeLimiter } = require('../middleware/rateLimiter');
+const { createPinSchema, updatePinSchema } = require('../schemas/pin.schemas');
+
+// Search pins — must be defined before /:id to avoid route conflict
+router.get('/search', readLimiter, async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return res.status(400).json({ message: 'Search query is required' });
+    }
+    const pins = await Pin.find({
+      $or: [
+        { title: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+        { tags: { $regex: q, $options: 'i' } },
+      ],
+    }).populate('user', 'username avatar').sort({ createdAt: -1 });
+    res.json(pins);
+  } catch (error) {
+    console.error('Search pins error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // Get all pins
-router.get('/', async (req, res) => {
+router.get('/', readLimiter, async (req, res) => {
   try {
-    const pins = await Pin.find().sort({ createdAt: -1 });
+    const pins = await Pin.find().populate('user', 'username avatar').sort({ createdAt: -1 });
     res.json(pins);
   } catch (error) {
     console.error('Get pins error:', error);
@@ -14,9 +39,9 @@ router.get('/', async (req, res) => {
 });
 
 // Get pin by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', readLimiter, async (req, res) => {
   try {
-    const pin = await Pin.findById(req.params.id);
+    const pin = await Pin.findById(req.params.id).populate('user', 'username avatar');
     if (!pin) {
       return res.status(404).json({ message: 'Pin not found' });
     }
@@ -27,17 +52,21 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create pin
-router.post('/', async (req, res) => {
+// Create pin (authenticated)
+router.post('/', writeLimiter, authMiddleware, validate(createPinSchema), async (req, res) => {
   try {
-    const { title, description, imageUrl, userId } = req.body;
+    const { title, description, imageUrl, category, tags, boardId } = req.body;
     const pin = new Pin({
       title,
       description,
       imageUrl,
-      user: userId,
+      category,
+      tags,
+      board: boardId || undefined,
+      user: req.user.userId,
     });
     await pin.save();
+    await pin.populate('user', 'username avatar');
     res.status(201).json(pin);
   } catch (error) {
     console.error('Create pin error:', error);
@@ -45,18 +74,20 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update pin
-router.put('/:id', async (req, res) => {
+// Update pin (authenticated, owner only)
+router.put('/:id', writeLimiter, authMiddleware, validate(updatePinSchema), async (req, res) => {
   try {
-    const { title, description } = req.body;
-    const pin = await Pin.findByIdAndUpdate(
-      req.params.id,
-      { title, description },
-      { new: true }
-    );
+    const pin = await Pin.findById(req.params.id);
     if (!pin) {
       return res.status(404).json({ message: 'Pin not found' });
     }
+    if (pin.user.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Not authorized to update this pin' });
+    }
+    const { title, description } = req.body;
+    pin.title = title ?? pin.title;
+    pin.description = description ?? pin.description;
+    await pin.save();
     res.json(pin);
   } catch (error) {
     console.error('Update pin error:', error);
@@ -64,13 +95,17 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Delete pin
-router.delete('/:id', async (req, res) => {
+// Delete pin (authenticated, owner only)
+router.delete('/:id', writeLimiter, authMiddleware, async (req, res) => {
   try {
-    const pin = await Pin.findByIdAndDelete(req.params.id);
+    const pin = await Pin.findById(req.params.id);
     if (!pin) {
       return res.status(404).json({ message: 'Pin not found' });
     }
+    if (pin.user.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Not authorized to delete this pin' });
+    }
+    await pin.deleteOne();
     res.json({ message: 'Pin deleted' });
   } catch (error) {
     console.error('Delete pin error:', error);
@@ -78,4 +113,4 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

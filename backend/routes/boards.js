@@ -1,9 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const Board = require('../models/Board');
+const authMiddleware = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const { readLimiter, writeLimiter } = require('../middleware/rateLimiter');
+const { createBoardSchema, updateBoardSchema } = require('../schemas/board.schemas');
 
 // Get all boards for a user
-router.get('/user/:userId', async (req, res) => {
+router.get('/user/:userId', readLimiter, async (req, res) => {
   try {
     const boards = await Board.find({ user: req.params.userId }).sort({ createdAt: -1 });
     res.json(boards);
@@ -14,7 +18,7 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 // Get board by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', readLimiter, async (req, res) => {
   try {
     const board = await Board.findById(req.params.id).populate('pins');
     if (!board) {
@@ -27,14 +31,14 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create board
-router.post('/', async (req, res) => {
+// Create board (authenticated)
+router.post('/', writeLimiter, authMiddleware, validate(createBoardSchema), async (req, res) => {
   try {
-    const { title, description, userId } = req.body;
+    const { title, description } = req.body;
     const board = new Board({
       title,
       description,
-      user: userId,
+      user: req.user.userId,
     });
     await board.save();
     res.status(201).json(board);
@@ -44,18 +48,20 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update board
-router.put('/:id', async (req, res) => {
+// Update board (authenticated, owner only)
+router.put('/:id', writeLimiter, authMiddleware, validate(updateBoardSchema), async (req, res) => {
   try {
-    const { title, description } = req.body;
-    const board = await Board.findByIdAndUpdate(
-      req.params.id,
-      { title, description },
-      { new: true }
-    );
+    const board = await Board.findById(req.params.id);
     if (!board) {
       return res.status(404).json({ message: 'Board not found' });
     }
+    if (board.user.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Not authorized to update this board' });
+    }
+    const { title, description } = req.body;
+    board.title = title ?? board.title;
+    board.description = description ?? board.description;
+    await board.save();
     res.json(board);
   } catch (error) {
     console.error('Update board error:', error);
@@ -63,13 +69,17 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Delete board
-router.delete('/:id', async (req, res) => {
+// Delete board (authenticated, owner only)
+router.delete('/:id', writeLimiter, authMiddleware, async (req, res) => {
   try {
-    const board = await Board.findByIdAndDelete(req.params.id);
+    const board = await Board.findById(req.params.id);
     if (!board) {
       return res.status(404).json({ message: 'Board not found' });
     }
+    if (board.user.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Not authorized to delete this board' });
+    }
+    await board.deleteOne();
     res.json({ message: 'Board deleted' });
   } catch (error) {
     console.error('Delete board error:', error);
@@ -77,8 +87,8 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Add pin to board
-router.post('/:id/pins', async (req, res) => {
+// Add pin to board (authenticated)
+router.post('/:id/pins', writeLimiter, authMiddleware, async (req, res) => {
   try {
     const { pinId } = req.body;
     const board = await Board.findById(req.params.id);
@@ -96,14 +106,14 @@ router.post('/:id/pins', async (req, res) => {
   }
 });
 
-// Remove pin from board
-router.delete('/:id/pins/:pinId', async (req, res) => {
+// Remove pin from board (authenticated)
+router.delete('/:id/pins/:pinId', writeLimiter, authMiddleware, async (req, res) => {
   try {
     const board = await Board.findById(req.params.id);
     if (!board) {
       return res.status(404).json({ message: 'Board not found' });
     }
-    board.pins = board.pins.filter(pin => pin.toString() !== req.params.pinId);
+    board.pins = board.pins.filter((pin) => pin.toString() !== req.params.pinId);
     await board.save();
     res.json(board);
   } catch (error) {
@@ -112,4 +122,4 @@ router.delete('/:id/pins/:pinId', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;
