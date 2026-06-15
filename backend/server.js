@@ -15,7 +15,22 @@ const uploadRoutes = require('./routes/upload');
 
 const app = express();
 
-app.use(cors());
+const ALLOWED_ORIGINS = [
+  'https://frontend-ebon-phi-50.vercel.app',
+  'https://frontend-samueldarius1470-8728s-projects.vercel.app',
+  'http://localhost:3000',
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(analyticsMiddleware);
 

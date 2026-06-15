@@ -27,11 +27,23 @@ router.get('/search', readLimiter, async (req, res) => {
   }
 });
 
-// Get all pins
+// Get all pins (paginated)
 router.get('/', readLimiter, async (req, res) => {
   try {
-    const pins = await Pin.find().populate('user', 'username avatar').sort({ createdAt: -1 });
-    res.json(pins);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const [pins, total] = await Promise.all([
+      Pin.find()
+        .populate('user', 'username avatar')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Pin.countDocuments(),
+    ]);
+
+    res.json({ pins, total, page, hasMore: skip + pins.length < total });
   } catch (error) {
     console.error('Get pins error:', error);
     res.status(500).json({ message: 'Server error' });

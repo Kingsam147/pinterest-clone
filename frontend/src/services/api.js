@@ -51,8 +51,8 @@ export const authAPI = {
 };
 
 export const pinsAPI = {
-  getAllPins: async () => {
-    const response = await fetch(`${API_URL}/pins`, {
+  getAllPins: async (page = 1, limit = 20) => {
+    const response = await fetch(`${API_URL}/pins?page=${page}&limit=${limit}`, {
       headers: authHeaders(),
     });
     return handleResponse(response);

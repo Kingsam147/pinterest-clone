@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { pinsAPI, commentsAPI } from '../services/api';
+import { pinsAPI, commentsAPI, boardsAPI } from '../services/api';
 
 const PinDetailScreen = () => {
   const { pinId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+
   const [pin, setPin] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -14,22 +15,46 @@ const PinDetailScreen = () => {
   const [commentLoading, setCommentLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const [userBoards, setUserBoards] = useState([]);
+  const [saveMenuOpen, setSaveMenuOpen] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('idle');
+
   useEffect(() => {
-    const fetchPin = async () => {
+    const fetchData = async () => {
       try {
-        const [pinData, commentsData] = await Promise.all([
-          pinsAPI.getPinById(pinId),
-          commentsAPI.getByPin(pinId),
-        ]);
-        setPin(pinData);
-        setComments(commentsData);
+        const fetches = [pinsAPI.getPinById(pinId), commentsAPI.getByPin(pinId)];
+        if (user) {
+          fetches.push(boardsAPI.getBoardsByUser(user.id || user._id));
+        }
+        const results = await Promise.all(fetches);
+        setPin(results[0]);
+        setComments(results[1]);
+        if (user) setUserBoards(results[2]);
       } catch {
         setError('Pin not found');
       } finally {
         setLoading(false);
       }
     };
-    fetchPin();
+    fetchData();
+  }, [pinId, user]);
+
+  useEffect(() => {
+    if (!saveMenuOpen) return;
+    const close = () => setSaveMenuOpen(false);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [saveMenuOpen]);
+
+  const handleSave = useCallback(async (boardId) => {
+    setSaveMenuOpen(false);
+    setSaveStatus('saving');
+    try {
+      await boardsAPI.addPin(boardId, pinId);
+      setSaveStatus('saved');
+    } catch {
+      setSaveStatus('idle');
+    }
   }, [pinId]);
 
   const handleAddComment = async () => {
@@ -44,7 +69,7 @@ const PinDetailScreen = () => {
       setComments((prev) => [...prev, comment]);
       setNewComment('');
     } catch {
-      // comment failed silently — could surface an error state here
+      // comment failed silently
     } finally {
       setCommentLoading(false);
     }
@@ -53,6 +78,9 @@ const PinDetailScreen = () => {
   if (loading) return <div style={{ textAlign: 'center', padding: '2rem' }}>Loading...</div>;
   if (error) return <div style={{ textAlign: 'center', padding: '2rem', color: '#E60023' }}>{error}</div>;
   if (!pin) return null;
+
+  const saveLabel = saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'saving' ? 'Saving...' : 'Save';
+  const saveColor = saveStatus === 'saved' ? '#00a854' : '#E60023';
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '1rem' }}>
@@ -65,11 +93,45 @@ const PinDetailScreen = () => {
         onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/600x400'; }}
       />
 
-      <h1 style={{ marginTop: '1rem' }}>{pin.title}</h1>
-      <p style={{ color: '#555' }}>{pin.description}</p>
+      <div style={styles.titleRow}>
+        <div style={styles.titleBlock}>
+          <h1 style={styles.title}>{pin.title}</h1>
+          {pin.description && <p style={styles.description}>{pin.description}</p>}
+        </div>
+
+        {user && (
+          <div style={styles.saveWrap} onClick={(e) => e.stopPropagation()}>
+            <button
+              style={{ ...styles.saveButton, backgroundColor: saveColor }}
+              onClick={() => setSaveMenuOpen((prev) => !prev)}
+              disabled={saveStatus === 'saving'}
+            >
+              {saveLabel}
+            </button>
+            {saveMenuOpen && (
+              <div style={styles.boardPicker}>
+                <p style={styles.boardPickerTitle}>Save to board</p>
+                {userBoards.length === 0 ? (
+                  <p style={styles.noBoardsText}>Create a board first</p>
+                ) : (
+                  userBoards.map((board) => (
+                    <button
+                      key={board._id}
+                      style={styles.boardItem}
+                      onClick={() => handleSave(board._id)}
+                    >
+                      {board.title}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {pin.user && (
-        <p style={{ color: '#888', fontSize: 14 }}>
+        <p style={{ color: '#888', fontSize: 14, marginTop: 4 }}>
           By <strong>{pin.user.username}</strong>
         </p>
       )}
@@ -132,6 +194,81 @@ const styles = {
     marginBottom: '1rem',
     padding: 0,
   },
+  titleRow: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: '1rem',
+    marginTop: '1rem',
+  },
+  titleBlock: {
+    flex: 1,
+  },
+  title: {
+    margin: 0,
+    fontSize: 24,
+    fontWeight: 700,
+    color: '#111',
+  },
+  description: {
+    margin: '6px 0 0',
+    color: '#555',
+    fontSize: 15,
+    lineHeight: 1.5,
+  },
+  saveWrap: {
+    position: 'relative',
+    flexShrink: 0,
+  },
+  saveButton: {
+    color: '#fff',
+    border: 'none',
+    borderRadius: 24,
+    padding: '10px 24px',
+    fontSize: 15,
+    fontWeight: 700,
+    cursor: 'pointer',
+    transition: 'background-color 150ms',
+    whiteSpace: 'nowrap',
+  },
+  boardPicker: {
+    position: 'absolute',
+    top: 'calc(100% + 8px)',
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
+    minWidth: 200,
+    zIndex: 50,
+    overflow: 'hidden',
+  },
+  boardPickerTitle: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: '#999',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    padding: '10px 14px 6px',
+    margin: 0,
+  },
+  noBoardsText: {
+    fontSize: 13,
+    color: '#bbb',
+    padding: '4px 14px 14px',
+    margin: 0,
+  },
+  boardItem: {
+    display: 'block',
+    width: '100%',
+    textAlign: 'left',
+    background: 'none',
+    border: 'none',
+    padding: '9px 14px',
+    fontSize: 14,
+    cursor: 'pointer',
+    color: '#222',
+    transition: 'background-color 150ms',
+  },
   badge: {
     display: 'inline-block',
     backgroundColor: '#f0f0f0',
@@ -139,6 +276,7 @@ const styles = {
     borderRadius: 12,
     fontSize: 13,
     color: '#333',
+    marginTop: 8,
   },
   tag: {
     display: 'inline-block',
@@ -161,6 +299,7 @@ const styles = {
     fontSize: 14,
     boxSizing: 'border-box',
     resize: 'vertical',
+    fontFamily: 'inherit',
   },
   commentButton: {
     marginTop: '0.5rem',
