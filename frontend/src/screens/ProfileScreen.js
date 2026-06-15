@@ -131,7 +131,7 @@ const ProfileScreen = () => {
             <div
               key={board._id}
               style={{ display: 'flex', alignItems: 'center', border: '1px solid #eee', borderRadius: 12, marginBottom: '1rem', padding: '1rem', cursor: 'pointer' }}
-              onClick={() => navigate(`/board/${board._id}`)}
+              onClick={() => navigate(`/boards/${board._id}`)}
             >
               <div style={{ flex: 1 }}>
                 <h4 style={{ margin: 0 }}>{board.title}</h4>

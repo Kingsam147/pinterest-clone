@@ -18,6 +18,7 @@ const PinDetailScreen = () => {
   const [userBoards, setUserBoards] = useState([]);
   const [saveMenuOpen, setSaveMenuOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState('idle');
+  const [hoveredBoardItemId, setHoveredBoardItemId] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -48,10 +49,9 @@ const PinDetailScreen = () => {
 
   const handleSave = useCallback(async (boardId) => {
     setSaveMenuOpen(false);
-    setSaveStatus('saving');
+    setSaveStatus('saved');
     try {
       await boardsAPI.addPin(boardId, pinId);
-      setSaveStatus('saved');
     } catch {
       setSaveStatus('idle');
     }
@@ -117,7 +117,12 @@ const PinDetailScreen = () => {
                   userBoards.map((board) => (
                     <button
                       key={board._id}
-                      style={styles.boardItem}
+                      style={{
+                        ...styles.boardItem,
+                        backgroundColor: hoveredBoardItemId === board._id ? '#f5f5f5' : 'transparent',
+                      }}
+                      onMouseEnter={() => setHoveredBoardItemId(board._id)}
+                      onMouseLeave={() => setHoveredBoardItemId(null)}
                       onClick={() => handleSave(board._id)}
                     >
                       {board.title}

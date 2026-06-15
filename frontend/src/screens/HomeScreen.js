@@ -23,6 +23,7 @@ const HomeScreen = () => {
   const [hoveredPinId, setHoveredPinId] = useState(null);
   const [openSaveMenuId, setOpenSaveMenuId] = useState(null);
   const [savedPinIds, setSavedPinIds] = useState(new Set());
+  const [hoveredBoardItemId, setHoveredBoardItemId] = useState(null);
 
   useEffect(() => {
     if (!user) {
@@ -93,11 +94,15 @@ const HomeScreen = () => {
 
   const handleSave = useCallback(async (boardId, pinId) => {
     setOpenSaveMenuId(null);
+    setSavedPinIds((prev) => new Set([...prev, pinId]));
     try {
       await boardsAPI.addPin(boardId, pinId);
-      setSavedPinIds((prev) => new Set([...prev, pinId]));
     } catch {
-      // save failed silently
+      setSavedPinIds((prev) => {
+        const updated = new Set(prev);
+        updated.delete(pinId);
+        return updated;
+      });
     }
   }, []);
 
@@ -121,6 +126,7 @@ const HomeScreen = () => {
           onChange={(e) => setSearchQuery(e.target.value)}
           style={styles.searchInput}
         />
+        <button onClick={() => navigate('/boards')} style={styles.navButton}>Boards</button>
         <button onClick={() => navigate('/profile')} style={styles.navButton}>Profile</button>
         <button onClick={() => navigate('/settings')} style={styles.navButton}>Settings</button>
       </div>
@@ -169,7 +175,12 @@ const HomeScreen = () => {
                         userBoards.map((board) => (
                           <button
                             key={board._id}
-                            style={styles.boardItem}
+                            style={{
+                              ...styles.boardItem,
+                              backgroundColor: hoveredBoardItemId === board._id ? '#f5f5f5' : 'transparent',
+                            }}
+                            onMouseEnter={() => setHoveredBoardItemId(board._id)}
+                            onMouseLeave={() => setHoveredBoardItemId(null)}
                             onClick={() => handleSave(board._id, pin._id)}
                           >
                             {board.title}

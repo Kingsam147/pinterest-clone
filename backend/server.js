@@ -12,14 +12,13 @@ const boardsRoutes = require('./routes/boards');
 const commentsRoutes = require('./routes/comments');
 const usersRoutes = require('./routes/users');
 const uploadRoutes = require('./routes/upload');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 
-const ALLOWED_ORIGINS = [
-  'https://frontend-ebon-phi-50.vercel.app',
-  'https://frontend-samueldarius1470-8728s-projects.vercel.app',
-  'http://localhost:3000',
-];
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((origin) => origin.trim())
+  : ['http://localhost:3000'];
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -44,6 +43,7 @@ app.use('/api/boards', boardsRoutes);
 app.use('/api/comments', commentsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

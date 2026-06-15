@@ -9,6 +9,8 @@ import ProfileScreen from './screens/ProfileScreen';
 import PinDetailScreen from './screens/PinDetailScreen';
 import CreatePinScreen from './screens/CreatePinScreen';
 import SettingsScreen from './screens/SettingsScreen';
+import BoardDetailScreen from './screens/BoardDetailScreen';
+import MyBoardsScreen from './screens/MyBoardsScreen';
 
 const theme = createTheme({
   palette: {
@@ -34,6 +36,8 @@ function App() {
             <Route path="/pin/:pinId" element={<PinDetailScreen />} />
             <Route path="/create-pin" element={<CreatePinScreen />} />
             <Route path="/settings" element={<SettingsScreen />} />
+            <Route path="/boards" element={<MyBoardsScreen />} />
+            <Route path="/boards/:boardId" element={<BoardDetailScreen />} />
           </Routes>
         </Router>
       </ThemeProvider>
