@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Board = require('../models/Board');
 const authMiddleware = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const { createBoardSchema, updateBoardSchema } = require('../schemas/board.schemas');
 
 // Get all boards for a user
 router.get('/user/:userId', async (req, res) => {
@@ -29,12 +31,9 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create board (authenticated)
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', authMiddleware, validate(createBoardSchema), async (req, res) => {
   try {
     const { title, description } = req.body;
-    if (!title) {
-      return res.status(400).json({ message: 'Title is required' });
-    }
     const board = new Board({
       title,
       description,
@@ -49,9 +48,8 @@ router.post('/', authMiddleware, async (req, res) => {
 });
 
 // Update board (authenticated, owner only)
-router.put('/:id', authMiddleware, async (req, res) => {
+router.put('/:id', authMiddleware, validate(updateBoardSchema), async (req, res) => {
   try {
-    const { title, description } = req.body;
     const board = await Board.findById(req.params.id);
     if (!board) {
       return res.status(404).json({ message: 'Board not found' });
@@ -59,6 +57,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (board.user.toString() !== req.user.userId) {
       return res.status(403).json({ message: 'Not authorized to update this board' });
     }
+    const { title, description } = req.body;
     board.title = title ?? board.title;
     board.description = description ?? board.description;
     await board.save();

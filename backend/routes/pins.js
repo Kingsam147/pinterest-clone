@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Pin = require('../models/Pin');
 const authMiddleware = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const { createPinSchema, updatePinSchema } = require('../schemas/pin.schemas');
 
 // Search pins — must be defined before /:id to avoid route conflict
 router.get('/search', async (req, res) => {
@@ -50,20 +52,15 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create pin (authenticated)
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', authMiddleware, validate(createPinSchema), async (req, res) => {
   try {
     const { title, description, imageUrl, category, tags, boardId } = req.body;
-
-    if (!title || !description || !imageUrl || !category) {
-      return res.status(400).json({ message: 'Title, description, imageUrl, and category are required' });
-    }
-
     const pin = new Pin({
       title,
       description,
       imageUrl,
       category,
-      tags: tags || [],
+      tags,
       board: boardId || undefined,
       user: req.user.userId,
     });
@@ -77,9 +74,8 @@ router.post('/', authMiddleware, async (req, res) => {
 });
 
 // Update pin (authenticated, owner only)
-router.put('/:id', authMiddleware, async (req, res) => {
+router.put('/:id', authMiddleware, validate(updatePinSchema), async (req, res) => {
   try {
-    const { title, description } = req.body;
     const pin = await Pin.findById(req.params.id);
     if (!pin) {
       return res.status(404).json({ message: 'Pin not found' });
@@ -87,6 +83,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (pin.user.toString() !== req.user.userId) {
       return res.status(403).json({ message: 'Not authorized to update this pin' });
     }
+    const { title, description } = req.body;
     pin.title = title ?? pin.title;
     pin.description = description ?? pin.description;
     await pin.save();

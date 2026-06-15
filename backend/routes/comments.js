@@ -3,6 +3,8 @@ const router = express.Router();
 const Comment = require('../models/Comment');
 const Pin = require('../models/Pin');
 const authMiddleware = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const { createCommentSchema } = require('../schemas/comment.schemas');
 
 // Get all comments for a pin
 router.get('/pin/:pinId', async (req, res) => {
@@ -18,12 +20,9 @@ router.get('/pin/:pinId', async (req, res) => {
 });
 
 // Add comment to a pin (authenticated)
-router.post('/pin/:pinId', authMiddleware, async (req, res) => {
+router.post('/pin/:pinId', authMiddleware, validate(createCommentSchema), async (req, res) => {
   try {
     const { text } = req.body;
-    if (!text || !text.trim()) {
-      return res.status(400).json({ message: 'Comment text is required' });
-    }
 
     const pin = await Pin.findById(req.params.pinId);
     if (!pin) {
@@ -31,7 +30,7 @@ router.post('/pin/:pinId', authMiddleware, async (req, res) => {
     }
 
     const comment = new Comment({
-      text: text.trim(),
+      text,
       user: req.user.userId,
       pin: req.params.pinId,
     });
