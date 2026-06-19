@@ -1,189 +1,84 @@
 # Pinterest Clone
 
-A full-stack Pinterest clone built with the MERN stack (MongoDB, Express.js, React.js, Node.js). 
+A full-stack image sharing and social platform. Users create pins, organise boards, follow others, comment, and upload images. Includes an analytics system that tracks engagement metrics, device types, and user segmentation in real time.
 
-## Features (existing, to improve, and implement)
+## Features
 
-- User authentication and authorization
-- Create, edit, and delete pins
-- Organize pins into boards
-- Follow/unfollow users
-- Comment on pins
-- Search functionality
-- Responsive design
-- Modern UI with Material-UI components
+- **Pins & boards** — create, save, and organise image pins across named boards
+- **Social graph** — follow users, view feeds based on follows
+- **Comments** — threaded comments on pins with full CRUD
+- **Image uploads** — images uploaded to Cloudinary with automatic resizing and optimisation
+- **User profiles** — customisable profiles with bio, location, website, and avatar
+- **Analytics tracking** — middleware captures device type, session duration, and engagement per request; users are automatically segmented into `casual`, `power`, `creator`, or `influencer` tiers based on activity score
+- **Admin panel** — protected routes for viewing platform-wide analytics
+- **Rate limiting** — Redis-backed per-IP rate limiting tiered by endpoint type (auth, read, write, admin)
+- **Input validation** — Zod schemas on all write endpoints
 
-## Prerequisites
+## Tech Stack
 
-Before you begin, ensure you have the following installed:
-- Node.js (v14 or higher)
-- MongoDB (v4.4 or higher)
-- npm or yarn package manager
+| Layer | Technologies |
+|---|---|
+| Backend | Node.js · Express · MongoDB · Mongoose |
+| Auth | JWT (jsonwebtoken) · bcryptjs |
+| Infrastructure | Redis (rate limiting) · Cloudinary (image storage) |
+| Validation | Zod |
+| Frontend | React |
+| Deployment | Docker · Vercel |
 
-## Project Structure
+## API Structure
 
 ```
-pinterest-clone/
-├── backend/
-│   ├── config/
-│   ├── controllers/
-│   ├── middleware/
-│   ├── models/
-│   ├── routes/
-│   ├── scripts/
-│   └── server.js
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── context/
-│   │   ├── hooks/
-│   │   ├── pages/
-│   │   ├── services/
-│   │   ├── styles/
-│   │   └── utils/
-│   └── package.json
-└── README.md
+/api/auth       — register, login, current user
+/api/pins       — CRUD for pins, save/unsave
+/api/boards     — CRUD for boards, add/remove pins
+/api/comments   — create, read, delete comments on pins
+/api/users      — profiles, follow/unfollow, feed
+/api/upload     — image upload to Cloudinary
+/api/admin      — platform analytics (admin only)
 ```
 
-## Setup Instructions
+## Getting Started
 
-### 1. Clone the Repository
+### Prerequisites
 
-```bash
-git clone https://github.com/yourusername/pinterest-clone.git (make sure it is private)
-cd pinterest-clone
-```
+- Node.js 20+
+- MongoDB instance (local or Atlas)
+- Redis instance
+- Cloudinary account
 
-### 2. Backend Setup
+### Backend setup
 
-1. Navigate to the backend directory:
 ```bash
 cd backend
-```
-
-2. Install dependencies:
-```bash
 npm install
 ```
 
-3. Create a `.env` file in the backend directory:
-```bash
+Create a `.env` file:
+
+```env
+MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/pinterest-clone
+REDIS_URL=redis://default:<password>@<host>:<port>
+JWT_SECRET=replace-with-a-long-random-secret
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/pinterest-clone
-JWT_SECRET=your_jwt_secret_here
+CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>
+ALLOWED_ORIGINS=https://your-frontend.vercel.app,http://localhost:3000
+ADMIN_SECRET=replace-with-a-long-random-secret
 ```
 
-4. Start MongoDB:
 ```bash
-# On macOS/Linux
-mongod
-
-# On Windows (if installed as a service)
-net start MongoDB
+npm run dev
 ```
 
-5. Seed the database:
-```bash
-node scripts/seedDatabase.js
-```
+### Frontend setup
 
-6. Start the backend server:
-```bash
-npm start
-```
-
-The backend server will run on `http://localhost:5000`
-
-### 3. Frontend Setup
-
-1. Open a new terminal and navigate to the frontend directory:
 ```bash
 cd frontend
-```
-
-2. Install dependencies:
-```bash
 npm install
-```
-
-3. Create a `.env` file in the frontend directory:
-```bash
-REACT_APP_API_URL=http://localhost:5000/api
-```
-
-4. Start the frontend development server:
-```bash
 npm start
 ```
 
-The frontend application will run on `http://localhost:3000`
+### Docker
 
-## API Endpoints
-
-### Authentication
-- POST `/api/auth/register` - Register a new user
-- POST `/api/auth/login` - Login user
-- GET `/api/auth/me` - Get current user
-
-### Users
-- GET `/api/users` - Get all users
-- GET `/api/users/:id` - Get user by ID
-- PUT `/api/users/:id` - Update user
-- GET `/api/users/:id/followers` - Get user followers
-- GET `/api/users/:id/following` - Get user following
-- POST `/api/users/:id/follow` - Follow user
-- POST `/api/users/:id/unfollow` - Unfollow user
-
-### Pins
-- GET `/api/pins` - Get all pins
-- GET `/api/pins/:id` - Get pin by ID
-- POST `/api/pins` - Create new pin
-- PUT `/api/pins/:id` - Update pin
-- DELETE `/api/pins/:id` - Delete pin
-- GET `/api/pins/search` - Search pins
-
-### Boards
-- GET `/api/boards` - Get all boards
-- GET `/api/boards/:id` - Get board by ID
-- POST `/api/boards` - Create new board
-- PUT `/api/boards/:id` - Update board
-- DELETE `/api/boards/:id` - Delete board
-
-### Comments
-- GET `/api/pins/:pinId/comments` - Get pin comments
-- POST `/api/pins/:pinId/comments` - Add comment to pin
-- DELETE `/api/pins/:pinId/comments/:commentId` - Delete comment
-
-## Test Accounts
-
-The database comes pre-seeded with test accounts. You can use any of these accounts to test the application:
-
-1. john_doe@example.com / password123
-2. sarah_smith@example.com / password123
-3. mike_wilson@example.com / password123
-4. emma_brown@example.com / password123
-5. david_lee@example.com / password123
-6. lisa_chen@example.com / password123
-7. alex_wright@example.com / password123
-8. sophia_rodriguez@example.com / password123
-9. james_miller@example.com / password123
-10. olivia_park@example.com / password123
-11. ryan_kim@example.com / password123
-12. mia_zhang@example.com / password123
-13. lucas_silva@example.com / password123
-14. ava_patel@example.com / password123
-15. noah_anderson@example.com / password123
-
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Material-UI for the component library
-- Unsplash for the image API
-- MongoDB for the database
-- Express.js for the backend framework
-- React.js for the frontend framework 
+```bash
+docker-compose up --build
+```
